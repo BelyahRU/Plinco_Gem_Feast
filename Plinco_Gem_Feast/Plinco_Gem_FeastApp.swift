@@ -1,17 +1,22 @@
-//
-//  Plinco_Gem_FeastApp.swift
-//  Plinco_Gem_Feast
-//
-//  Created by Александр Андреев on 13.02.2025.
-//
-
 import SwiftUI
 
 @main
 struct Plinco_Gem_FeastApp: App {
+    
+    @AppStorage("isInitialLounch") var isInitialLounch = true
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if isInitialLounch {
+                WelcomeStoryView(onMain: {
+                    isInitialLounch = false
+                })
+                .edgesIgnoringSafeArea(.all)
+            } else {
+                MainView()
+                    .edgesIgnoringSafeArea(.all)
+            }
         }
     }
 }
+
