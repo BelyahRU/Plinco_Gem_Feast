@@ -22,7 +22,7 @@ struct MainView: View {
                 .zIndex(2)
 
                 // Кнопка Play с переходом
-                NavigationLink(destination: GameView()) {
+                NavigationLink(destination: LevelsView()) {
                     Image("playGameButton")
                         .resizable()
                         .scaledToFit()
@@ -43,7 +43,7 @@ struct MainView: View {
                 
                 DiamondsView()
                     .zIndex(2)
-                    .position(CGPoint(x: 71, y: SizeData.screenHeight - (SizeData.isSmallPhone ? 0 :39)))
+                    .position(CGPoint(x: 71, y: SizeData.screenHeight - (SizeData.isSmallPhone ? 0 :80)))
             }
         }
         .navigationBarHidden(true) // Скрыть навигационный бар

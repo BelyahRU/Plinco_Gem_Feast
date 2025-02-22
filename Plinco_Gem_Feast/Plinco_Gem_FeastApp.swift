@@ -13,10 +13,11 @@ struct Plinco_Gem_FeastApp: App {
                 })
                 .edgesIgnoringSafeArea(.all)
             } else {
-                GameView()
+                MainView()
                     .edgesIgnoringSafeArea(.all)
             }
         }
+        
     }
 }
 
