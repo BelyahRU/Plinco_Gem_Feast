@@ -22,6 +22,17 @@ struct GameView: View {
         }
     }
 }
+extension SKSpriteNode {
+    var ballType: String? {
+        get { return self.userData?["ballType"] as? String }
+        set { self.userData = newValue != nil ? [ "ballType": newValue! ] : nil }
+    }
+    
+    var groupKey: String? {
+        get { return self.userData?["groupKey"] as? String }
+        set { self.userData?["groupKey"] = newValue }
+    }
+}
 import SpriteKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
@@ -29,7 +40,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private var ball: SKSpriteNode!
     private var ropeSpeed: CGFloat = 3.0
     private var attachedBalls: [SKSpriteNode] = [] // Храним прикрепленные шары
-    private let ballImages = ["greenBallImage", "purpleBallImage", "pinkBallImage", "orangeBallImage", "darkGreenBallImage", "blueBallImage", "yellowBallImage"]
+    private let ballImages = [
+        "greenBallImage", "purpleBallImage", "pinkBallImage",
+        "orangeBallImage", "darkGreenBallImage", "blueBallImage", "yellowBallImage"
+    ]
 
     override func didMove(to view: SKView) {
         backgroundColor = .clear
@@ -53,7 +67,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         ball = SKSpriteNode(texture: texture)
         ball.size = CGSize(width: 66, height: 66)
         ball.position = CGPoint(x: size.width / 2, y: size.height / 2)
-
+        
         ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2)
         ball.physicsBody?.isDynamic = false
         ball.physicsBody?.affectedByGravity = false
@@ -61,7 +75,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         ball.physicsBody?.categoryBitMask = 1
         ball.physicsBody?.collisionBitMask = 1
         ball.physicsBody?.contactTestBitMask = 1
-
+        ball.physicsBody?.restitution = 0
+        ball.physicsBody?.friction = 1.0
+        
         addChild(ball)
         attachedBalls.append(ball) // Добавляем центральный шар в список
     }
@@ -72,7 +88,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             let newBall = SKSpriteNode(imageNamed: randomImage)
             newBall.size = CGSize(width: 32, height: 32)
             newBall.position = CGPoint(x: self.size.width / 2, y: self.size.height - 50)
-
+            
             newBall.physicsBody = SKPhysicsBody(circleOfRadius: newBall.size.width / 2)
             newBall.physicsBody?.isDynamic = true
             newBall.physicsBody?.affectedByGravity = true
@@ -80,10 +96,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             newBall.physicsBody?.categoryBitMask = 1
             newBall.physicsBody?.collisionBitMask = 1
             newBall.physicsBody?.contactTestBitMask = 1
-
+            newBall.physicsBody?.restitution = 0
+            newBall.physicsBody?.friction = 10
+            
             self.addChild(newBall)
         }
-
+        
         let waitAction = SKAction.wait(forDuration: 1.0)
         let sequence = SKAction.sequence([spawnAction, waitAction])
         run(SKAction.repeatForever(sequence))
@@ -102,13 +120,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private func attachBall(_ newBall: SKSpriteNode, to parentBall: SKSpriteNode) {
         newBall.removeFromParent()
         newBall.position = parentBall.convert(newBall.position, from: self)
-        newBall.physicsBody = SKPhysicsBody(circleOfRadius: newBall.size.width / 2)
+        newBall.physicsBody = SKPhysicsBody(circleOfRadius: newBall.size.width / 2 - 3)
         newBall.physicsBody?.isDynamic = false
         newBall.physicsBody?.affectedByGravity = false
-
+        newBall.physicsBody?.collisionBitMask = 0
+        
         parentBall.addChild(newBall)
         attachedBalls.append(newBall)
-
+        
+        newBall.physicsBody?.restitution = 0
+        newBall.physicsBody?.friction = 10
+        
         // Соединяем шары физическим соединением
         let joint = SKPhysicsJointPin.joint(withBodyA: parentBall.physicsBody!,
                                             bodyB: newBall.physicsBody!,
@@ -119,14 +141,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let deltaX = touch.location(in: self).x - touch.previousLocation(in: self).x
-
+        
         moveRope(by: deltaX)
         rotateBall(by: deltaX)
     }
 
     private func moveRope(by offset: CGFloat) {
         rope.position.x += -offset * ropeSpeed / 10
-
+        
         if rope.position.x > size.width {
             rope.position.x -= size.width
         } else if rope.position.x < 0 {
@@ -141,3 +163,4 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         ball.run(rotateAction)
     }
 }
+
