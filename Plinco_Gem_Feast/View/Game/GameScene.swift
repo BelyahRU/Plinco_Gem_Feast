@@ -81,7 +81,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 //            checkForRemoval()
 //        }
 //        attachBall(newBall, to: parentBall)
-        attachBall(newBall, to: parentBall)
+//        attachBall(newBall, to: parentBall)
+        attachBall(newBall)
 
         // Пересчитываем флаги для всех мячей после прикрепления нового
         updateAllFlags()
@@ -146,15 +147,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     
-    private func attachBall(_ newBall: SKSpriteNode, to parentBall: SKSpriteNode) {
+    private func attachBall(_ newBall: SKSpriteNode) {
         newBall.removeFromParent()
-        newBall.position = parentBall.convert(newBall.position, from: self)
+        // Пересчитываем позицию нового шарика относительно главного шара
+        newBall.position = ball.convert(newBall.position, from: self)
         newBall.physicsBody?.isDynamic = false
         newBall.physicsBody?.affectedByGravity = false
-        
-        parentBall.addChild(newBall)
+
+        // Прикрепляем новый шарик к главному шару
+        ball.addChild(newBall)
         attachedBalls.append(newBall)
     }
+
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
