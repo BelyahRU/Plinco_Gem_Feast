@@ -11,15 +11,19 @@ class LevelManager {
     private init() {}
     
     // Получаем текущий список разблокированных уровней (словарь)
-    var levels: [Int: Bool] {
+    var levels: [String: Bool] {
         get {
-            if let savedLevels = userDefaults.dictionary(forKey: levelsKey) as? [Int: Bool] {
+            if let savedLevels = userDefaults.dictionary(forKey: levelsKey) as? [String: Bool] {
                 return savedLevels
             } else {
                 // Если данных нет, возвращаем словарь с первым уровнем разблокированным
-                var defaultLevels = [Int: Bool]()
+                var defaultLevels = [String: Bool]()
                 for i in 1...totalLevels {
-                    defaultLevels[i] = i == 1 // Первый уровень всегда разблокирован
+                    if i == 1 {
+                        defaultLevels[String(i)] = true
+                    } else {
+                        defaultLevels[String(i)] = false
+                    }
                 }
                 return defaultLevels
             }
@@ -31,16 +35,14 @@ class LevelManager {
     
     // Проверяем, разблокирован ли уровень
     func isLevelUnlocked(_ level: Int) -> Bool {
-        return levels[level] ?? false
+        return levels[String(level)] ?? false
     }
     
-    // Функция для разблокировки следующего уровня
-    func unlockNextLevel() {
-        for level in 1...totalLevels {
-            if let isUnlocked = levels[level], !isUnlocked {
-                levels[level] = true
-                break
-            }
-        }
+    
+    
+    func ulockLevel(for level: Int) {
+        
+        levels[String(level)] = true
+        print(levels)
     }
 }

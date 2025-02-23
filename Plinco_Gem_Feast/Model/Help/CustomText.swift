@@ -39,3 +39,23 @@ struct CustomText: View {
         }
     }
 }
+
+
+struct CustomText2: View {
+    let text: String
+    let width: CGFloat = 1
+    let color = Color(red: 1.0/255.0, green: 108.0/255.0, blue: 161.0/255.0)
+    
+    var body: some View {
+        ZStack{
+            ZStack{
+                Text(text).offset(x:  width, y:  width)
+                Text(text).offset(x: -width, y: -width)
+                Text(text).offset(x: -width, y:  width)
+                Text(text).offset(x:  width, y: -width)
+            }
+            .foregroundColor(color)
+            Text(text)
+        }
+    }
+}

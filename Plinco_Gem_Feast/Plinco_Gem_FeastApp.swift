@@ -13,6 +13,9 @@ struct Plinco_Gem_FeastApp: App {
                 })
                 .edgesIgnoringSafeArea(.all)
             } else {
+//                GameView(currentLevel: 1, onHome: {
+//                    print("home")
+//                })
                 MainView()
                     .edgesIgnoringSafeArea(.all)
             }

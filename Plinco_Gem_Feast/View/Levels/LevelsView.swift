@@ -15,9 +15,12 @@ struct LevelsView: View {
     
     var body: some View {
         if isGame {
-            GameView(currentLevel: currentlevel)
-                .edgesIgnoringSafeArea(.all)
-                .navigationBarHidden(true)
+            GameView(currentLevel: currentlevel) {
+                isGame = false
+                presentationMode.wrappedValue.dismiss()
+            }
+            .edgesIgnoringSafeArea(.all)
+            .navigationBarHidden(true)
         } else {
             ZStack {
                 

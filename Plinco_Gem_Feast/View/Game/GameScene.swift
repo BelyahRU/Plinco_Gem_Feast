@@ -2,20 +2,107 @@
 import SpriteKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
+    
+    public let goalTracker = GoalTracker()
+    
     private var rope: SKSpriteNode!
     private var ball: SKSpriteNode!
     private var ropeSpeed: CGFloat = 3.0
     private var attachedBalls: [SKSpriteNode] = []
+    private var ballsConnected: [SKSpriteNode] = []
     private var ballFlags: [SKSpriteNode: String] = [:]
-    private let ballImages = ["greenBallImage", "purpleBallImage"]
+    private var ballProbabilities: [String: Int] = [
+        "greenBallImage": 30,
+        "purpleBallImage": 10,
+        "blueBallImage": 30,
+        "darkGreenBallImage": 2,
+        "orangeBallImage": 2,
+        "pinkBallImage": 10,
+        "yellowBallImage": 12,
+        "rainbowBallImage": 4
+    ]
+    var gameZone: SKShapeNode!
+
+    
+    var currentLevel: Int
+        
+        // Инициализация с уровнем
+        init(size: CGSize, currentLevel: Int) {
+            self.currentLevel = currentLevel
+            super.init(size: size)
+        }
+        
+        required init?(coder aDecoder: NSCoder) {
+            self.currentLevel = 1 // Значение по умолчанию, если используется расшифровка из архива
+            super.init(coder: aDecoder)
+        }
+    
+    // Флаг для обозначения победы
+        private var isGameWon = false {
+            didSet {
+                if isGameWon {
+                    // Останавливаем игру
+                    self.view?.isPaused = true
+                    
+                    // Отображаем сообщение о победе
+                    showWinMessage()
+                }
+            }
+        }
 
     override func didMove(to view: SKView) {
         backgroundColor = .clear
         physicsWorld.contactDelegate = self
-        
+        physicsWorld.gravity = CGVector(dx: 0, dy: -3.0)
+        goalTracker.setLevel(level: 0)
         setupRope()
         setupBall()
         spawnBalls()
+        setupGameZone()
+        
+    }
+    
+    private func setupGameZone() {
+        gameZone = SKShapeNode(circleOfRadius: 130) // радиус игровой зоны
+        gameZone.position = ball.position
+        gameZone.strokeColor = SKColor.gray
+        gameZone.lineWidth = 2
+        gameZone.fillColor = SKColor.clear
+        addChild(gameZone)
+    }
+    
+    private func spawnBalls() {
+        let spawnAction = SKAction.run {
+            // Генерируем случайное изображение с учетом вероятностей
+            let randomImage = self.generateRandomBallImage()
+            let newBall = SKSpriteNode(imageNamed: randomImage)
+            newBall.size = CGSize(width: 32, height: 32)
+            newBall.position = CGPoint(x: self.size.width / 2, y: self.size.height - 50)
+            newBall.name = randomImage
+            newBall.physicsBody = SKPhysicsBody(circleOfRadius: newBall.size.width / 2 - 2.5)
+            newBall.physicsBody?.isDynamic = true
+            newBall.physicsBody?.affectedByGravity = true
+            newBall.physicsBody?.categoryBitMask = 1
+            newBall.physicsBody?.contactTestBitMask = 1
+            
+            self.addChild(newBall)
+        }
+        
+        let waitAction = SKAction.wait(forDuration: 2.0)
+        let sequence = SKAction.sequence([spawnAction, waitAction])
+        run(SKAction.repeatForever(sequence))
+    }
+    
+    private func generateRandomBallImage() -> String {
+        // Создаем массив всех возможных вариантов с учетом весов
+        var weightedImages: [String] = []
+        for (image, weight) in ballProbabilities {
+            weightedImages += Array(repeating: image, count: weight)
+        }
+        
+        // Генерируем случайный индекс и возвращаем соответствующее изображение
+        let randomIndex = Int.random(in: 0..<weightedImages.count)
+        return weightedImages[randomIndex]
     }
 
     private func setupRope() {
@@ -39,31 +126,39 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         ball.physicsBody?.categoryBitMask = 1
         ball.physicsBody?.collisionBitMask = 1
         ball.physicsBody?.contactTestBitMask = 1
-        
+
         addChild(ball)
         attachedBalls.append(ball)
+        
+    }
+    
+    override func update(_ currentTime: TimeInterval) {
+        for attachedBall in attachedBalls {
+            // Преобразуем позицию мяча в мировую систему координат
+            let ballPositionInScene = self.convert(attachedBall.position, from: ball)
+            
+            // Проверяем, находится ли мяч за пределами игровой зоны
+            if !gameZone.contains(ballPositionInScene) && attachedBall != ball{
+                print("Game Over: Ball \(attachedBall.name ?? "") is outside the game zone at position \(ballPositionInScene)")
+                gameOver()
+                break
+            }
+        }
     }
 
-    private func spawnBalls() {
-        let spawnAction = SKAction.run {
-            let randomImage = self.ballImages.randomElement() ?? "greenBallImage"
-            let newBall = SKSpriteNode(imageNamed: randomImage)
-            newBall.size = CGSize(width: 32, height: 32)
-            newBall.position = CGPoint(x: self.size.width / 2, y: self.size.height - 50)
-            newBall.name = randomImage
-            newBall.physicsBody = SKPhysicsBody(circleOfRadius: newBall.size.width / 2 - 2.5)
-            newBall.physicsBody?.isDynamic = true
-            newBall.physicsBody?.affectedByGravity = true
-            newBall.physicsBody?.categoryBitMask = 1
-            newBall.physicsBody?.contactTestBitMask = 1
-            
-            self.addChild(newBall)
-        }
+
+
+
+    private func gameOver() {
+        // Останавливаем игру
+        self.view?.isPaused = true
         
-        let waitAction = SKAction.wait(forDuration: 2.0)
-        let sequence = SKAction.sequence([spawnAction, waitAction])
-        run(SKAction.repeatForever(sequence))
+        // Отправляем уведомление о проигрыше
+        NotificationCenter.default.post(name: NSNotification.Name("GameOver"), object: nil)
     }
+
+
+
 
     func didBegin(_ contact: SKPhysicsContact) {
         if let nodeA = contact.bodyA.node as? SKSpriteNode, let nodeB = contact.bodyB.node as? SKSpriteNode {
@@ -76,18 +171,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func handleCollision(newBall: SKSpriteNode, parentBall: SKSpriteNode) {
-//        if newBall.name! == parentBall.name! {
-//            mergeFlags(newBall, parentBall)
-//            checkForRemoval()
-//        }
-//        attachBall(newBall, to: parentBall)
-//        attachBall(newBall, to: parentBall)
         attachBall(newBall)
 
-        // Пересчитываем флаги для всех мячей после прикрепления нового
         updateAllFlags()
 
-        // Проверяем на удаление после полной проверки
         checkForRemoval()
 
     }
@@ -131,18 +218,48 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     private func checkForRemoval() {
         let groups = Dictionary(grouping: ballFlags.keys) { ballFlags[$0]! }
-
         for (_, balls) in groups where balls.count >= 3 {
-            let firstBallColor = balls.first?.name // Проверяем цвет группы
-
+            let firstBallColor = balls.first?.name ?? ""
             for ball in balls {
-                // Удаляем только шары нужного цвета
                 if ball.name == firstBallColor {
                     ball.removeFromParent()
                     attachedBalls.removeAll { $0 == ball }
                     ballFlags.removeValue(forKey: ball)
+                    // Обновляем прогресс цели
+                    goalTracker.updateProgress(for: firstBallColor)
+                    
+                    // Обновляем информацию о целях для GameView
+                    updateGoalInfo()
                 }
             }
+        }
+        
+        // Проверяем, достигнута ли цель
+        if goalTracker.isGoalCompleted() && !isGameWon {
+            print("Вы выполнили все цели!")
+            self.isPaused = true
+            isGameWon = true
+        }
+    }
+
+    private func updateGoalInfo() {
+        // Передаем обновленную информацию о целях в GameView
+        NotificationCenter.default.post(name: NSNotification.Name("Goals"), object: goalTracker.getAllGoalsInfo())
+    }
+
+    
+    private func showWinMessage() {
+        // Создаем узел с текстом
+        self.isPaused = true
+        
+        // Отправляем уведомление о победе
+        NotificationCenter.default.post(name: NSNotification.Name("GameWon"), object: nil)
+    }
+    
+    func printGoalsInfo() {
+        let goalsInfo = goalTracker.getAllGoalsInfo()
+        for (color, current, target) in goalsInfo {
+            print("\(color): \(current) / \(target)")
         }
     }
 
