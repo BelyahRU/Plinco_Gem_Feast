@@ -12,14 +12,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private var ballsConnected: [SKSpriteNode] = []
     private var ballFlags: [SKSpriteNode: String] = [:]
     private var ballProbabilities: [String: Int] = [
-        "greenBallImage": 30,
+        "greenBallImage": 15,
         "purpleBallImage": 10,
-        "blueBallImage": 30,
-        "darkGreenBallImage": 2,
+        "blueBallImage": 2,
+        "darkGreenBallImage": 12,
         "orangeBallImage": 2,
-        "pinkBallImage": 10,
-        "yellowBallImage": 12,
-        "rainbowBallImage": 4
+        "pinkBallImage": 23,
+        "yellowBallImage": 2,
+        "rainbowBallImage": 30
     ]
     var gameZone: SKShapeNode!
 
@@ -173,19 +173,44 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private func handleCollision(newBall: SKSpriteNode, parentBall: SKSpriteNode) {
         attachBall(newBall)
 
-        updateAllFlags()
+        if newBall.name == "rainbowBallImage" || parentBall.name == "rainbowBallImage" {
+            handleRainbowCollision(newBall, parentBall)
+        } else {
+            updateAllFlags()
+        }
 
         checkForRemoval()
-
     }
+
+    private func handleRainbowCollision(_ newBall: SKSpriteNode, _ parentBall: SKSpriteNode) {
+        if newBall.name == "rainbowBallImage" {
+            mergeRainbowFlags(newBall, parentBall)
+        } else if parentBall.name == "rainbowBallImage" {
+            mergeRainbowFlags(parentBall, newBall)
+        }
+    }
+
+    private func mergeRainbowFlags(_ rainbowBall: SKSpriteNode, _ otherBall: SKSpriteNode) {
+        if let existingFlag = ballFlags[otherBall] {
+            print("Rainbow ball \(rainbowBall.name ?? "unknown") merges with flag from \(otherBall.name ?? "unknown")")
+            ballFlags[rainbowBall] = existingFlag
+        } else {
+            let newFlag = UUID().uuidString
+            print("New flag \(newFlag) assigned to \(rainbowBall.name ?? "unknown") and \(otherBall.name ?? "unknown")")
+            ballFlags[rainbowBall] = newFlag
+            ballFlags[otherBall] = newFlag
+        }
+    }
+
+
+
     
     private func updateAllFlags() {
-        let allBalls = attachedBalls
-        
+        let allBalls = attachedBalls.filter { $0 != self.ball }  // Исключаем главный шар из обработки
+
         for ball in allBalls {
-            for otherBall in allBalls {
-                // Проверяем, что цвета совпадают перед мерджем
-                if ball != otherBall && ball.name == otherBall.name {
+            for otherBall in allBalls where ball != otherBall {
+                if ball.name == otherBall.name || ball.name == "rainbowBallImage" || otherBall.name == "rainbowBallImage" {
                     mergeFlags(ball, otherBall)
                 }
             }
@@ -194,16 +219,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
 
 
+
+
     private func mergeFlags(_ newBall: SKSpriteNode, _ parentBall: SKSpriteNode) {
         let newBallPositionInScene = newBall.parent?.convert(newBall.position, to: self) ?? newBall.position
 
         let nearbyBalls = attachedBalls.filter { ball in
-            guard ball.name == newBall.name else { return false }
+            guard ball.name == newBall.name || ball.name == "rainbowBallImage" || newBall.name == "rainbowBallImage" else { return false }
             
             let ballPositionInScene = ball.parent?.convert(ball.position, to: self) ?? ball.position
             return ballPositionInScene.distance(to: newBallPositionInScene) < 40
         }
-        
         
         var flagSet: Set<String> = Set(nearbyBalls.compactMap { ballFlags[$0] })
         let newFlag = flagSet.first ?? UUID().uuidString
@@ -215,25 +241,62 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         ballFlags[newBall] = newFlag
     }
 
+
+
+//    private func checkForRemoval() {
+//        let groups = Dictionary(grouping: ballFlags.keys) { ballFlags[$0]! }
+//        for (flag, balls) in groups where balls.count >= 3 {
+//            for ball in balls where ball.name == "rainbowBallImage" || ball.name == "rainbowBallImage" {
+//                // Удалить только радужные шарики и шарики того же флага
+//                removeBallsForFlag(flag)
+//            }
+//        }
+//        // Проверяем, достигнута ли цель
+//        if goalTracker.isGoalCompleted() && !isGameWon {
+//            print("Вы выполнили все цели!")
+//            self.isPaused = true
+//            isGameWon = true
+//        }
+//    }
+
+    private func removeBallsForFlag(_ flag: String) {
+        let ballsToRemove = attachedBalls.filter { ballFlags[$0] == flag && $0 != self.ball }
+        for ball in ballsToRemove {
+            ball.removeFromParent()
+            attachedBalls.removeAll { $0 == ball }
+            ballFlags.removeValue(forKey: ball)
+            goalTracker.updateProgress(for: ball.name!)
+        }
+        updateGoalInfo()
+    }
+
     
     private func checkForRemoval() {
         let groups = Dictionary(grouping: ballFlags.keys) { ballFlags[$0]! }
-        for (_, balls) in groups where balls.count >= 3 {
-            let firstBallColor = balls.first?.name ?? ""
-            for ball in balls {
-                if ball.name == firstBallColor {
-                    ball.removeFromParent()
-                    attachedBalls.removeAll { $0 == ball }
-                    ballFlags.removeValue(forKey: ball)
-                    // Обновляем прогресс цели
-                    goalTracker.updateProgress(for: firstBallColor)
-                    
-                    // Обновляем информацию о целях для GameView
-                    updateGoalInfo()
+        for (flag, balls) in groups where balls.count >= 3 {
+            let rainbowBalls = balls.filter { $0.name == "rainbowBallImage" }
+            if !rainbowBalls.isEmpty {
+                // Удаляем все шары, связанные с радужными шарами
+                for ball in balls where ball.name == "rainbowBallImage" || ball.name == "rainbowBallImage" {
+                    // Удалить только радужные шарики и шарики того же флага
+                    removeBallsForFlag(flag)
+                }
+            } else {
+                // Удаление происходит как обычно
+                let firstBallColor = balls.first?.name ?? ""
+                for ball in balls {
+                    if ball.name == firstBallColor {
+                        ball.removeFromParent()
+                        attachedBalls.removeAll { $0 == ball }
+                        ballFlags.removeValue(forKey: ball)
+                        goalTracker.updateProgress(for: ball.name!)
+                    }
                 }
             }
         }
-        
+        updateGoalInfo()
+
+    
         // Проверяем, достигнута ли цель
         if goalTracker.isGoalCompleted() && !isGameWon {
             print("Вы выполнили все цели!")

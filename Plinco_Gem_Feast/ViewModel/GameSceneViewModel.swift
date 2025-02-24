@@ -6,20 +6,43 @@ struct Goal {
 }
 
 class GoalTracker {
-    
+    private var ballProbabilities: [String: Int] = [
+        "greenBallImage": 30,
+        "purpleBallImage": 10,
+        "blueBallImage": 30,
+        "darkGreenBallImage": 2,
+        "orangeBallImage": 2,
+        "pinkBallImage": 10,
+        "yellowBallImage": 12,
+        "rainbowBallImage": 2,
+        "bombBallImage" : 2
+    ]
     var goals: [Goal]
     var levelGoals: [[Goal]] = [
-        [Goal(color: "blueBallImage", targetCount: 1)], //1
-        [Goal(color: "blueBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 1)],//2
-        [Goal(color: "blueBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 1)],//3
-        [Goal(color: "blueBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 1)],//4
-        [Goal(color: "blueBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 1)],//...
-        [Goal(color: "blueBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 1)],
-        [Goal(color: "blueBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 1)],
-        [Goal(color: "blueBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 1)],
-        [Goal(color: "blueBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 1)],
-        [Goal(color: "blueBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 1)],
-        // Добавьте остальные уровни здесь
+        [Goal(color: "greenBallImage", targetCount: 3), Goal(color: "pinkBallImage", targetCount: 3), Goal(color: "darkGreenBallImage", targetCount: 6)], //1
+        
+        [Goal(color: "blueBallImage", targetCount: 6), Goal(color: "purpleBallImage", targetCount: 6), Goal(color: "yellowBallImage", targetCount: 6)], //2
+        
+        [Goal(color: "darkGreenBallImage", targetCount: 3), Goal(color: "yellowBallImage", targetCount: 6), Goal(color: "orangeBallImage", targetCount: 3), Goal(color: "greenBallImage", targetCount: 9)], //3
+        
+        [Goal(color: "greenBallImage", targetCount: 3), Goal(color: "pinkBallImage", targetCount: 3), Goal(color: "blueBallImage", targetCount: 3), Goal(color: "orangeBallImage", targetCount: 9)], //4
+        
+        [Goal(color: "yellowBallImage", targetCount: 9), Goal(color: "greenBallImage", targetCount: 9), Goal(color: "purpleBallImage", targetCount: 9), Goal(color: "darkGreenBallImage", targetCount: 6)], //5
+        
+        [Goal(color: "rainbowBallImage", targetCount: 1), Goal(color: "purpleBallImage", targetCount: 3), Goal(color: "orangeBallImage", targetCount: 9), Goal(color: "pinkBallImage", targetCount: 12)], //6
+        
+        [Goal(color: "bombBallImage", targetCount: 1), Goal(color: "yellowBallImage", targetCount: 6), Goal(color: "rainbowBallImage", targetCount: 1), Goal(color: "greenBallImage", targetCount: 9)], //7
+        
+        [Goal(color: "purpleBallImage", targetCount: 12), Goal(color: "darkGreenBallImage", targetCount: 12), Goal(color: "pinkBallImage", targetCount: 9), Goal(color: "orangeBallImage", targetCount: 12)], //8
+        
+        [Goal(color: "darkGreenBallImage", targetCount: 9), Goal(color: "greenBallImage", targetCount: 12), Goal(color: "yellowBallImage", targetCount: 9), Goal(color: "blueBallImage", targetCount: 6)], //9
+        
+        [Goal(color: "blueBallImage", targetCount: 12), Goal(color: "purpleBallImage", targetCount: 3), Goal(color: "pinkBallImage", targetCount: 3), Goal(color: "greenBallImage", targetCount: 6)], //10
+        
+        [Goal(color: "rainbowBallImage", targetCount: 2), Goal(color: "purpleBallImage", targetCount: 9), Goal(color: "orangeBallImage", targetCount: 12), Goal(color: "bombBallImage", targetCount: 1)], //11
+        
+        [Goal(color: "darkGreenBallImage", targetCount: 15), Goal(color: "blueBallImage", targetCount: 12), Goal(color: "greenBallImage", targetCount: 9), Goal(color: "rainbowBallImage", targetCount: 3)], //12
+        
     ]
     
     init() {
