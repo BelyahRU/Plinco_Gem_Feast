@@ -18,8 +18,8 @@ class GoalTracker {
             "orangeBallImage": 2,
             "pinkBallImage": 15,
             "yellowBallImage": 12,
-            "rainbowBallImage": 5,
-            "bombBallImage" : 54
+            "rainbowBallImage": 7,
+            "bombBallImage" : 5
         ],
         //2 level
         [

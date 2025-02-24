@@ -60,8 +60,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private func setupGameZone() {
         gameZone = SKShapeNode(circleOfRadius: 170)
         gameZone.position = ball.position
-        gameZone.strokeColor = SKColor.gray
-        gameZone.lineWidth = 2
+        gameZone.strokeColor = SKColor.clear
+//        gameZone.lineWidth = 2
         gameZone.fillColor = SKColor.clear
         addChild(gameZone)
     }
@@ -303,6 +303,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
         // Группируем мячи по каждому их флагу
         for (ball, flags) in ballFlags {
+            print("new group")
             for flag in flags {
                 print(flag, ball.name)
                 flagGroups[flag, default: []].append(ball)
@@ -328,6 +329,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             }
             print("removed:")
             for ball in toRemove {
+                print(ball.name)
                 let position = self.ball.convert(ball.position, to: self)
                 RubinManager.shared.addRubins(1)
                 showScoreEffect(at: position)
