@@ -6,18 +6,165 @@ struct Goal {
 }
 
 class GoalTracker {
-    private var ballProbabilities: [String: Int] = [
-        "greenBallImage": 30,
-        "purpleBallImage": 10,
-        "blueBallImage": 30,
-        "darkGreenBallImage": 2,
-        "orangeBallImage": 2,
-        "pinkBallImage": 10,
-        "yellowBallImage": 12,
-        "rainbowBallImage": 2,
-        "bombBallImage" : 2
-    ]
     var goals: [Goal]
+    
+    var levelSettings: [[String: Int]] = [
+        //1 level
+        [
+            "greenBallImage": 30,
+            "purpleBallImage": 10,
+            "blueBallImage": 30,
+            "darkGreenBallImage": 20,
+            "orangeBallImage": 2,
+            "pinkBallImage": 15,
+            "yellowBallImage": 12,
+            "rainbowBallImage": 5,
+            "bombBallImage" : 54
+        ],
+        //2 level
+        [
+            "greenBallImage": 10,
+            "purpleBallImage": 30,
+            "blueBallImage": 30,
+            "darkGreenBallImage": 5,
+            "orangeBallImage": 20,
+            "pinkBallImage": 10,
+            "yellowBallImage": 30,
+            "rainbowBallImage": 8,
+            "bombBallImage" : 4
+        ],
+        
+        //3 level
+        [
+            "greenBallImage": 50,
+            "purpleBallImage": 10,
+            "blueBallImage": 5,
+            "darkGreenBallImage": 25,
+            "orangeBallImage": 20,
+            "pinkBallImage": 5,
+            "yellowBallImage": 35,
+            "rainbowBallImage": 3,
+            "bombBallImage" : 6
+        ],
+        
+        //4 level
+        [
+            "greenBallImage": 20,
+            "purpleBallImage": 5,
+            "blueBallImage": 20,
+            "darkGreenBallImage": 5,
+            "orangeBallImage": 40,
+            "pinkBallImage": 20,
+            "yellowBallImage": 10,
+            "rainbowBallImage": 3,
+            "bombBallImage" : 6
+        ],
+        
+        //5 level
+        [
+            "greenBallImage": 30,
+            "purpleBallImage": 30,
+            "blueBallImage": 5,
+            "darkGreenBallImage": 20,
+            "orangeBallImage": 10,
+            "pinkBallImage": 5,
+            "yellowBallImage": 25,
+            "rainbowBallImage": 8,
+            "bombBallImage" : 12
+        ],
+        //6 level
+        [
+            "greenBallImage": 10,
+            "purpleBallImage": 15,
+            "blueBallImage": 10,
+            "darkGreenBallImage": 10,
+            "orangeBallImage": 25,
+            "pinkBallImage": 35,
+            "yellowBallImage": 8,
+            "rainbowBallImage": 8,
+            "bombBallImage" : 10
+        ],
+        
+        //7 level
+        [
+            "greenBallImage": 30,
+            "purpleBallImage": 10,
+            "blueBallImage": 10,
+            "darkGreenBallImage": 10,
+            "orangeBallImage": 25,
+            "pinkBallImage": 15,
+            "yellowBallImage": 25,
+            "rainbowBallImage": 8,
+            "bombBallImage" : 8
+        ],
+        
+        //8 level
+        [
+            "greenBallImage": 10,
+            "purpleBallImage": 25,
+            "blueBallImage": 5,
+            "darkGreenBallImage": 30,
+            "orangeBallImage": 40,
+            "pinkBallImage": 25,
+            "yellowBallImage": 25,
+            "rainbowBallImage": 6,
+            "bombBallImage" : 12
+        ],
+        
+        //9 level
+        [
+            "greenBallImage": 20,
+            "purpleBallImage": 10,
+            "blueBallImage": 15,
+            "darkGreenBallImage": 30,
+            "orangeBallImage": 10,
+            "pinkBallImage": 15,
+            "yellowBallImage": 30,
+            "rainbowBallImage": 8,
+            "bombBallImage" : 12
+        ],
+        
+        //10 level
+        [
+            "greenBallImage": 30,
+            "purpleBallImage": 20,
+            "blueBallImage": 30,
+            "darkGreenBallImage": 30,
+            "orangeBallImage": 10,
+            "pinkBallImage": 15,
+            "yellowBallImage": 10,
+            "rainbowBallImage": 5,
+            "bombBallImage" : 10
+        ],
+        
+        //11 level
+        [
+            "greenBallImage": 20,
+            "purpleBallImage": 20,
+            "blueBallImage": 40,
+            "darkGreenBallImage": 5,
+            "orangeBallImage": 5,
+            "pinkBallImage": 30,
+            "yellowBallImage": 10,
+            "rainbowBallImage": 5,
+            "bombBallImage" : 8
+        ],
+        
+        
+        //12 level
+        [
+            "greenBallImage": 25,
+            "purpleBallImage": 8,
+            "blueBallImage": 30,
+            "darkGreenBallImage": 35,
+            "orangeBallImage": 10,
+            "pinkBallImage": 5,
+            "yellowBallImage": 5,
+            "rainbowBallImage": 15,
+            "bombBallImage" : 10
+        ],
+    ]
+    
     var levelGoals: [[Goal]] = [
         [Goal(color: "greenBallImage", targetCount: 3), Goal(color: "pinkBallImage", targetCount: 3), Goal(color: "darkGreenBallImage", targetCount: 6)], //1
         
@@ -49,6 +196,18 @@ class GoalTracker {
         self.goals = levelGoals[0]
     }
     
+    func getLevelSettings(level: Int) -> [String: Int] {
+        var result: [String: Int]
+        if levelSettings.count < level || level <= 0{
+            result = levelSettings.randomElement()!
+        } else {
+            
+            result = levelSettings[level-1]
+        }
+        print(result)
+        return result
+    }
+    
     func setLevel(level: Int) {
         guard level >= 0 && level < levelGoals.count else {
             print("Уровень \(level) не существует")
@@ -64,6 +223,7 @@ class GoalTracker {
                 break
             }
         }
+        print(goals)
     }
     
     func isGoalCompleted() -> Bool {

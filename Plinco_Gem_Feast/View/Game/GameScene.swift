@@ -10,60 +10,55 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private var ropeSpeed: CGFloat = 3.0
     private var attachedBalls: [SKSpriteNode] = []
     private var ballsConnected: [SKSpriteNode] = []
-    private var ballFlags: [SKSpriteNode: String] = [:]
-    private var ballProbabilities: [String: Int] = [
-        "greenBallImage": 15,
-        "purpleBallImage": 10,
-        "blueBallImage": 2,
-        "darkGreenBallImage": 12,
-        "orangeBallImage": 2,
-        "pinkBallImage": 23,
-        "yellowBallImage": 2,
-        "rainbowBallImage": 30
-    ]
+    private var ballFlags: [SKSpriteNode: Set<String>] = [:]
+
+    var ballProbabilities: [String: Int]
     var gameZone: SKShapeNode!
 
     
     var currentLevel: Int
-        
-        // Инициализация с уровнем
-        init(size: CGSize, currentLevel: Int) {
-            self.currentLevel = currentLevel
-            super.init(size: size)
-        }
-        
-        required init?(coder aDecoder: NSCoder) {
-            self.currentLevel = 1 // Значение по умолчанию, если используется расшифровка из архива
-            super.init(coder: aDecoder)
-        }
     
-    // Флаг для обозначения победы
-        private var isGameWon = false {
-            didSet {
-                if isGameWon {
-                    // Останавливаем игру
-                    self.view?.isPaused = true
-                    
-                    // Отображаем сообщение о победе
-                    showWinMessage()
-                }
+    private var isGameWon = false {
+        didSet {
+            if isGameWon {
+                // Останавливаем игру
+                self.view?.isPaused = true
+                
+                // Отображаем сообщение о победе
+                showWinMessage()
             }
         }
+    }
+
+        
+    init(size: CGSize, currentLevel: Int) {
+        self.currentLevel = currentLevel
+        self.ballProbabilities = goalTracker.getLevelSettings(level: currentLevel)
+        super.init(size: size)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        self.currentLevel = 1
+        self.ballProbabilities = goalTracker.getLevelSettings(level: currentLevel)
+        super.init(coder: aDecoder)
+    }
+    
 
     override func didMove(to view: SKView) {
         backgroundColor = .clear
         physicsWorld.contactDelegate = self
         physicsWorld.gravity = CGVector(dx: 0, dy: -3.0)
-        goalTracker.setLevel(level: 0)
+        goalTracker.setLevel(level: currentLevel-1)
         setupRope()
         setupBall()
         spawnBalls()
         setupGameZone()
+        updateGoalInfo()
         
     }
     
     private func setupGameZone() {
-        gameZone = SKShapeNode(circleOfRadius: 130) // радиус игровой зоны
+        gameZone = SKShapeNode(circleOfRadius: 170)
         gameZone.position = ball.position
         gameZone.strokeColor = SKColor.gray
         gameZone.lineWidth = 2
@@ -71,7 +66,25 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         addChild(gameZone)
     }
     
+    private func showScoreEffect(at position: CGPoint) {
+        let scoreLabel = SKLabelNode(text: "+1")
+        scoreLabel.fontName = "Katibeh-Regular"
+        scoreLabel.fontSize = 20
+        scoreLabel.fontColor = .white
+        scoreLabel.position = position
+        scoreLabel.zPosition = 10
+        addChild(scoreLabel)
+        
+        let moveUp = SKAction.moveBy(x: 0, y: 20, duration: 0.5)
+        let fadeOut = SKAction.fadeOut(withDuration: 0.5)
+        let remove = SKAction.removeFromParent()
+        let sequence = SKAction.sequence([SKAction.group([moveUp, fadeOut]), remove])
+        
+        scoreLabel.run(sequence)
+    }
+    
     private func spawnBalls() {
+        guard !isPaused else { return }
         let spawnAction = SKAction.run {
             // Генерируем случайное изображение с учетом вероятностей
             let randomImage = self.generateRandomBallImage()
@@ -84,7 +97,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             newBall.physicsBody?.affectedByGravity = true
             newBall.physicsBody?.categoryBitMask = 1
             newBall.physicsBody?.contactTestBitMask = 1
-            
+            newBall.zRotation = 0
             self.addChild(newBall)
         }
         
@@ -173,130 +186,160 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private func handleCollision(newBall: SKSpriteNode, parentBall: SKSpriteNode) {
         attachBall(newBall)
 
-        if newBall.name == "rainbowBallImage" || parentBall.name == "rainbowBallImage" {
-            handleRainbowCollision(newBall, parentBall)
-        } else {
-            updateAllFlags()
-        }
+        updateAllFlags()
 
         checkForRemoval()
-    }
 
-    private func handleRainbowCollision(_ newBall: SKSpriteNode, _ parentBall: SKSpriteNode) {
-        if newBall.name == "rainbowBallImage" {
-            mergeRainbowFlags(newBall, parentBall)
-        } else if parentBall.name == "rainbowBallImage" {
-            mergeRainbowFlags(parentBall, newBall)
+        // ⚡ Если это бомба, запускаем таймер взрыва
+        if newBall.name == "bombBallImage" {
+            showBombRadius(for: newBall)
+            explodeBomb(after: 1.0, bomb: newBall)
         }
     }
-
-    private func mergeRainbowFlags(_ rainbowBall: SKSpriteNode, _ otherBall: SKSpriteNode) {
-        if let existingFlag = ballFlags[otherBall] {
-            print("Rainbow ball \(rainbowBall.name ?? "unknown") merges with flag from \(otherBall.name ?? "unknown")")
-            ballFlags[rainbowBall] = existingFlag
-        } else {
-            let newFlag = UUID().uuidString
-            print("New flag \(newFlag) assigned to \(rainbowBall.name ?? "unknown") and \(otherBall.name ?? "unknown")")
-            ballFlags[rainbowBall] = newFlag
-            ballFlags[otherBall] = newFlag
-        }
+    private func showBombRadius(for bomb: SKSpriteNode) {
+        let explosionRadius: CGFloat = 70
+        
+        // 🔴 Создаем круг (визуальный радиус взрыва)
+        let explosionCircle = SKShapeNode(circleOfRadius: explosionRadius)
+        explosionCircle.strokeColor = .red
+        explosionCircle.lineWidth = 2.5
+        explosionCircle.fillColor = .clear
+        explosionCircle.name = "explosionCircle"
+        
+        // 📍 Устанавливаем позицию круга на бомбу
+        explosionCircle.position = CGPoint.zero
+        bomb.addChild(explosionCircle)
     }
 
+    
+    private func explodeBomb(after delay: TimeInterval, bomb: SKSpriteNode) {
+        let explosionRadius: CGFloat = 70
+        
+        // 🚀 Через 3 секунды взрываем бомбу
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            guard self.attachedBalls.contains(bomb) else { return }
+            
+            let bombPositionInScene = bomb.parent?.convert(bomb.position, to: self) ?? bomb.position
 
+            // 🔎 Ищем все шары в радиусе 40 px
+            let ballsToRemove = self.attachedBalls.filter { ball in
+                let ballPositionInScene = ball.parent?.convert(ball.position, to: self) ?? ball.position
+                return bombPositionInScene.distance(to: ballPositionInScene) <= explosionRadius
+            }
+            
+            // 💥 Удаляем все найденные шары
+            for ball in ballsToRemove {
+                if ball != self.ball {
+                    ball.removeFromParent()
+                    self.attachedBalls.removeAll { $0 == ball }
+                    self.ballFlags.removeValue(forKey: ball)
+                    self.goalTracker.updateProgress(for: ball.name!)
+                }
+            }
+
+            // 🎯 Также удаляем саму бомбу
+            bomb.removeFromParent()
+            self.attachedBalls.removeAll { $0 == bomb }
+            self.ballFlags.removeValue(forKey: bomb)
+            self.updateGoalInfo()
+            // Проверяем, достигнута ли цель
+            if self.goalTracker.isGoalCompleted() && !self.isGameWon {
+                print("Вы выполнили все цели!")
+                self.isPaused = true
+                self.isGameWon = true
+            }
+            print("💥 Bomb exploded! Removed \(ballsToRemove.count) balls.")
+        }
+    }
 
     
     private func updateAllFlags() {
-        let allBalls = attachedBalls.filter { $0 != self.ball }  // Исключаем главный шар из обработки
-
+        let allBalls = attachedBalls.filter{$0 != self.ball}
+        
         for ball in allBalls {
-            for otherBall in allBalls where ball != otherBall {
-                if ball.name == otherBall.name || ball.name == "rainbowBallImage" || otherBall.name == "rainbowBallImage" {
-                    mergeFlags(ball, otherBall)
+            for otherBall in allBalls {
+                // Проверяем, что цвета совпадают перед мерджем
+                if ball != otherBall && ball.name == otherBall.name {
+                    mergeFlags(ball)
                 }
             }
         }
     }
-
-
-
-
-
-    private func mergeFlags(_ newBall: SKSpriteNode, _ parentBall: SKSpriteNode) {
+    
+    private func mergeFlags(_ newBall: SKSpriteNode) {
         let newBallPositionInScene = newBall.parent?.convert(newBall.position, to: self) ?? newBall.position
 
         let nearbyBalls = attachedBalls.filter { ball in
-            guard ball.name == newBall.name || ball.name == "rainbowBallImage" || newBall.name == "rainbowBallImage" else { return false }
-            
+            guard ball.name == newBall.name || newBall.name == "rainbowBallImage" || ball.name == "rainbowBallImage" else { return false }
+
             let ballPositionInScene = ball.parent?.convert(ball.position, to: self) ?? ball.position
             return ballPositionInScene.distance(to: newBallPositionInScene) < 40
         }
-        
-        var flagSet: Set<String> = Set(nearbyBalls.compactMap { ballFlags[$0] })
-        let newFlag = flagSet.first ?? UUID().uuidString
-        flagSet.insert(newFlag)
-        
-        for ball in nearbyBalls {
-            ballFlags[ball] = newFlag
+
+        // Собираем все флаги от соседей
+        var flagSet: Set<String> = nearbyBalls.compactMap { ballFlags[$0] }.reduce(into: Set<String>()) { $0.formUnion($1) }
+
+        // Если новый мяч - rainbow, он получает все флаги соседей
+        if newBall.name == "rainbowBallImage" {
+            flagSet.formUnion(nearbyBalls.compactMap { ballFlags[$0] }.reduce(into: Set<String>()) { $0.formUnion($1) })
         }
-        ballFlags[newBall] = newFlag
+
+
+        // Если у мячей вообще не было флагов, создаем новый
+        if flagSet.isEmpty {
+            flagSet.insert(UUID().uuidString)
+        }
+
+        // Назначаем всем мячам обновленный набор флагов
+        for ball in nearbyBalls + [newBall] {
+            ballFlags[ball] = (ballFlags[ball] ?? Set()).union(flagSet)
+        }
     }
 
 
 
-//    private func checkForRemoval() {
-//        let groups = Dictionary(grouping: ballFlags.keys) { ballFlags[$0]! }
-//        for (flag, balls) in groups where balls.count >= 3 {
-//            for ball in balls where ball.name == "rainbowBallImage" || ball.name == "rainbowBallImage" {
-//                // Удалить только радужные шарики и шарики того же флага
-//                removeBallsForFlag(flag)
-//            }
-//        }
-//        // Проверяем, достигнута ли цель
-//        if goalTracker.isGoalCompleted() && !isGameWon {
-//            print("Вы выполнили все цели!")
-//            self.isPaused = true
-//            isGameWon = true
-//        }
-//    }
-
-    private func removeBallsForFlag(_ flag: String) {
-        let ballsToRemove = attachedBalls.filter { ballFlags[$0] == flag && $0 != self.ball }
-        for ball in ballsToRemove {
-            ball.removeFromParent()
-            attachedBalls.removeAll { $0 == ball }
-            ballFlags.removeValue(forKey: ball)
-            goalTracker.updateProgress(for: ball.name!)
-        }
-        updateGoalInfo()
-    }
-
-    
     private func checkForRemoval() {
-        let groups = Dictionary(grouping: ballFlags.keys) { ballFlags[$0]! }
-        for (flag, balls) in groups where balls.count >= 3 {
-            let rainbowBalls = balls.filter { $0.name == "rainbowBallImage" }
-            if !rainbowBalls.isEmpty {
-                // Удаляем все шары, связанные с радужными шарами
-                for ball in balls where ball.name == "rainbowBallImage" || ball.name == "rainbowBallImage" {
-                    // Удалить только радужные шарики и шарики того же флага
-                    removeBallsForFlag(flag)
+        var flagGroups: [String: [SKSpriteNode]] = [:]
+
+        // Группируем мячи по каждому их флагу
+        for (ball, flags) in ballFlags {
+            for flag in flags {
+                print(flag, ball.name)
+                flagGroups[flag, default: []].append(ball)
+            }
+        }
+
+        // Проверяем группы и удаляем мячи
+        for (flag, balls) in flagGroups where balls.count >= 3 {
+            let firstBallColor = balls.first?.name ?? ""
+
+            var toRemove: [SKSpriteNode] = []
+
+            for ball in balls {
+                // Если это обычный мяч, он удаляется
+                if ball.name != "rainbowBallImage" {
+                    toRemove.append(ball)
                 }
-            } else {
-                // Удаление происходит как обычно
-                let firstBallColor = balls.first?.name ?? ""
-                for ball in balls {
-                    if ball.name == firstBallColor {
-                        ball.removeFromParent()
-                        attachedBalls.removeAll { $0 == ball }
-                        ballFlags.removeValue(forKey: ball)
-                        goalTracker.updateProgress(for: ball.name!)
-                    }
+//                toRemove.append(ball)
+//                // Если это RainbowBall, проверяем, что он столкнулся с этим флагом
+                if ball.name == "rainbowBallImage", let ballFlagsSet = ballFlags[ball], ballFlagsSet.contains(flag) {
+                    toRemove.append(ball)
                 }
+            }
+            print("removed:")
+            for ball in toRemove {
+                let position = self.ball.convert(ball.position, to: self)
+                RubinManager.shared.addRubins(1)
+                showScoreEffect(at: position)
+                ball.removeFromParent()
+                attachedBalls.removeAll { $0 == ball }
+                ballFlags.removeValue(forKey: ball)
+                // Обновляем прогресс цели только для обычных мячей
+                goalTracker.updateProgress(for: ball.name!)
+                
             }
         }
         updateGoalInfo()
-
-    
         // Проверяем, достигнута ли цель
         if goalTracker.isGoalCompleted() && !isGameWon {
             print("Вы выполнили все цели!")
@@ -304,6 +347,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             isGameWon = true
         }
     }
+
+
 
     private func updateGoalInfo() {
         // Передаем обновленную информацию о целях в GameView
@@ -314,8 +359,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private func showWinMessage() {
         // Создаем узел с текстом
         self.isPaused = true
-        
         // Отправляем уведомление о победе
+        if currentLevel != 12 {
+            if LevelManager.shared.isLevelUnlocked(currentLevel + 1) {
+                RubinManager.shared.addRubins(50)
+            } else {
+                RubinManager.shared.addRubins(150)
+            }
+        } else {
+            RubinManager.shared.addRubins(50)
+        }
         NotificationCenter.default.post(name: NSNotification.Name("GameWon"), object: nil)
     }
     
@@ -329,6 +382,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     private func attachBall(_ newBall: SKSpriteNode) {
         newBall.removeFromParent()
+        newBall.zRotation = 0
         // Пересчитываем позицию нового шарика относительно главного шара
         newBall.position = ball.convert(newBall.position, from: self)
         newBall.physicsBody?.isDynamic = false

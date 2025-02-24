@@ -15,14 +15,25 @@ struct GoalDisplayView: View {
             HStack(spacing: 7) {
                 ForEach(goalsInfo, id: \.color) { goal in
                     ZStack(alignment: .center) {
-                        Image("\(goal.color)")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 30, height: 30)
-                            .overlay(
-                                Circle()  // Обводка вокруг изображения
-                                    .stroke(borderColor, lineWidth: 1.5)
-                            )
+                        if goal.color != "bombBallImage"{
+                            Image("\(goal.color)")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 30, height: 30)
+                                .overlay(
+                                    Circle()  // Обводка вокруг изображения
+                                        .stroke(borderColor, lineWidth: 1.5)
+                                )
+                        } else {
+                            Image("bombNewImage")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 30, height: 30)
+                                .overlay(
+                                    Circle()  // Обводка вокруг изображения
+                                        .stroke(borderColor, lineWidth: 1.5)
+                                )
+                        }
                         
                         CustomText2(text: "\(goal.targetCount - goal.currentCount)")
 //                        Text("\(goal.targetCount - goal.currentCount)")

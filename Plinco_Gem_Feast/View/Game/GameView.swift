@@ -4,11 +4,13 @@ import SpriteKit
 
 struct GameView: View {
     
+    @AppStorage("isFirstdrGammrere") var isFirstGame = true
     var onHome: () -> Void
     
     @State private var isGameWon = false
     @State private var isGameOver = false
     @State private var isPause = false
+    @State private var isInfo = false
     @State var goalsInfo: [(color: String, currentCount: Int, targetCount: Int)] = []
     
     @State var currentLevel: Int
@@ -30,15 +32,19 @@ struct GameView: View {
                     .edgesIgnoringSafeArea(.all)
                 
                 ZStack(alignment: .top) {
-                    SpriteView(scene: scene, options: [.allowsTransparency])
-                        .edgesIgnoringSafeArea(.all)
-                        .background(.clear)
-                        .id(scene)
-                        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("GameWon"))) { _ in
-                            withAnimation {
-                                isGameWon = true
+                    if !isFirstGame {
+                        SpriteView(scene: scene, options: [.allowsTransparency])
+                            .edgesIgnoringSafeArea(.all)
+                            .background(.clear)
+                            .id(scene)
+                            
+                            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("GameWon"))) { _ in
+                                withAnimation {
+                                    isGameWon = true
+                                }
                             }
-                        }
+                    }
+                        
                     
                     // Goal Display
                     ZStack(alignment: .topTrailing) {
@@ -79,10 +85,31 @@ struct GameView: View {
                 }, onHome: {
                     onHome()
                 }, onInfo: {
-                    print("info")
+                    isInfo = true
                 })
                 .edgesIgnoringSafeArea(.all)
                 .zIndex(3)
+            }
+            if isInfo {
+                InfoGameView(onCancel: {
+                    if isFirstGame {
+                        isFirstGame = false
+                        scene.isPaused = false
+                    }
+                    isInfo = false
+                }, onPlay: {
+                    scene.isPaused = false
+                    if isFirstGame {
+                        isFirstGame = false
+                    }
+                    isPause = false
+                    isInfo = false
+                })
+                    .edgesIgnoringSafeArea(.all)
+                    .zIndex(4)
+                    .onAppear {
+                        self.scene.isPaused = true
+                    }
             }
             if isGameWon {
                 YouWinView {
@@ -124,6 +151,11 @@ struct GameView: View {
                 self.isGameOver = true // Показываем GameOverView
             }
             goalsInfo = scene.goalTracker.getAllGoalsInfo()
+            if isFirstGame {
+                self.scene.isPaused = true
+                isInfo = true
+//                scene.isPaused = true
+            }
         }
     }
 
@@ -136,7 +168,11 @@ struct GameView: View {
     }
     
     private func setupNextLevel() {
-        currentLevel += 1
+        if currentLevel > 0 && currentLevel < 12 {
+            currentLevel += 1
+        } else {
+            currentLevel = 1
+        }
         
         LevelManager.shared.ulockLevel(for: currentLevel)
         
